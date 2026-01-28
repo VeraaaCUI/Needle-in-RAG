@@ -1,0 +1,33 @@
+dataset: nq
+paths:
+  chunks: data/nq/chunks.jsonl
+  answers: data/nq/answers.jsonl
+  index_dir: artifacts/nq_tfidf
+run:
+  top_k: 10
+  max_questions: null
+  output_jsonl: runs/nq_run.jsonl
+llm:
+  backend: ollama  # one of: ollama, llama_cpp, openai
+  temperature: 0.0
+  max_tokens: 128
+  # ollama
+  ollama_model: llama3:8b
+  ollama_url: http://localhost:11434
+  # llama_cpp
+  llama_cpp_model_path: null
+  llama_cpp_n_ctx: 4096
+  llama_cpp_n_gpu_layers: 0
+  # openai
+  openai_model: gpt-4o-mini
+prompt:
+  system: |
+    You are a careful question answering assistant. Use the provided retrieved context.
+    If the answer is not in the context, say you don't know.
+  template: |
+    Question: {question}
+
+    Retrieved context:
+    {contexts}
+
+    Answer with a short phrase.
