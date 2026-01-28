@@ -1,0 +1,57 @@
+{
+  "dataset": "msmarco",
+  "split_by": [
+    "attack"
+  ],
+  "mode": "by_answers_qid",
+  "groups": [
+    {
+      "group": {
+        "attack": "AbvDecoding"
+      },
+      "dir": "data_splits/msmarco/attack=AbvDecoding",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "ContentPoison"
+      },
+      "dir": "data_splits/msmarco/attack=ContentPoison",
+      "answers": 60,
+      "chunks": 300
+    },
+    {
+      "group": {
+        "attack": "CorpusPoison"
+      },
+      "dir": "data_splits/msmarco/attack=CorpusPoison",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "GASLITE"
+      },
+      "dir": "data_splits/msmarco/attack=GASLITE",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "PoisonedRAG(black)"
+      },
+      "dir": "data_splits/msmarco/attack=PoisonedRAG_black",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "PoisonedRAG(white)"
+      },
+      "dir": "data_splits/msmarco/attack=PoisonedRAG_white",
+      "answers": 600,
+      "chunks": 3000
+    }
+  ]
+}

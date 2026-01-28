@@ -1,0 +1,13 @@
+{
+  "dataset": "msmarco",
+  "attack": "GARAG",
+  "model": "nomodel",
+  "out_dir": "data_splits\\msmarco\\attack=GARAG",
+  "answers": "data_splits\\msmarco\\attack=GARAG\\answers.jsonl",
+  "chunks": "data_splits\\msmarco\\attack=GARAG\\chunks.jsonl",
+  "source_files": [
+    "data\\msmarco\\GARAG5-ans.json"
+  ],
+  "n_qas": 100,
+  "n_chunks": 500
+}
