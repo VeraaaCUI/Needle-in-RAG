@@ -1,0 +1,16 @@
+{
+  "dataset": "nq",
+  "attack": "GARAG",
+  "model": "nomodel",
+  "out_dir": "data_splits\\nq\\attack=GARAG",
+  "answers": "data_splits\\nq\\attack=GARAG\\answers.jsonl",
+  "chunks": "data_splits\\nq\\attack=GARAG\\chunks.jsonl",
+  "source_files": [
+    "data\\nq\\GARAG1-ans.json",
+    "data\\nq\\GARAG2-ans.json",
+    "data\\nq\\GARAG3-ans.json",
+    "data\\nq\\GARAG5-ans.json"
+  ],
+  "n_qas": 400,
+  "n_chunks": 2000
+}

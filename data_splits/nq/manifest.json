@@ -1,0 +1,65 @@
+{
+  "dataset": "nq",
+  "split_by": [
+    "attack"
+  ],
+  "mode": "by_answers_qid",
+  "groups": [
+    {
+      "group": {
+        "attack": "AbvDecoding"
+      },
+      "dir": "data_splits/nq/attack=AbvDecoding",
+      "answers": 1800,
+      "chunks": 9000
+    },
+    {
+      "group": {
+        "attack": "AdvDec"
+      },
+      "dir": "data_splits/nq/attack=AdvDec",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "ContentPoison"
+      },
+      "dir": "data_splits/nq/attack=ContentPoison",
+      "answers": 280,
+      "chunks": 1400
+    },
+    {
+      "group": {
+        "attack": "CorpusPoison"
+      },
+      "dir": "data_splits/nq/attack=CorpusPoison",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "GASLITE"
+      },
+      "dir": "data_splits/nq/attack=GASLITE",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "PoisonedRAG(black)"
+      },
+      "dir": "data_splits/nq/attack=PoisonedRAG_black",
+      "answers": 600,
+      "chunks": 3000
+    },
+    {
+      "group": {
+        "attack": "PoisonedRAG(white)"
+      },
+      "dir": "data_splits/nq/attack=PoisonedRAG_white",
+      "answers": 600,
+      "chunks": 3000
+    }
+  ]
+}
