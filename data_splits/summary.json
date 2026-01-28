@@ -1,0 +1,14 @@
+{
+  "nq": {
+    "groups": 7,
+    "total_answers": 5080,
+    "total_chunks": 25400,
+    "manifest": "data_splits/nq/manifest.json"
+  },
+  "msmarco": {
+    "groups": 6,
+    "total_answers": 3060,
+    "total_chunks": 15300,
+    "manifest": "data_splits/msmarco/manifest.json"
+  }
+}
