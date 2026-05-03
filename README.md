@@ -1,165 +1,196 @@
-# RAG Char-Trace (Poisoning Reproduction Scaffold)
+# RAGCharacter: Character-Level Poison Traceback in RAG
 
-本仓库提供一个**可复现实验记录（trace）**的 RAG 框架，用于在**已污染的检索库（poisoned corpus）**上复现前人工作中的“中毒效果”（例如 ASR/攻击成功率），并为后续“字符级（span-level）查毒/归因”研究预留接口。
+## 📌 Overview
 
-你当前已经具备的数据格式（示例）：
-- `data/<dataset>/chunks.jsonl`：每行一个 chunk，包含 `chunk_id`, `text`, `guilty_spans`, `meta` 等
-- `data/<dataset>/answers.jsonl`：每行一个问题样本，包含 `qid`, `question`, `answer`, `incorrect_answer` 等
+This repository implements **RAGCharacter**, a black-box forensic framework for **character-level poison traceback** in Retrieval-Augmented Generation (RAG) systems.
 
-## 1. 目录结构
+Retrieval-augmented generation improves factual grounding by conditioning LLMs on external evidence. However, it also introduces a data-layer attack surface: adversaries can inject poisoned corpus entries to steer model outputs without modifying model parameters.
 
-```
+Existing defenses and traceback approaches are mostly passage-level, which is too coarse for modern attacks where the effective payload may be:
+
+- a short fabricated claim
+- a trigger phrase
+- a hidden instruction embedded in benign text
+
+RAGCharacter addresses this by performing fine-grained attribution at the character/span level.
+
+---
+
+## 📄 Paper Abstract
+
+**Authors:**  
+Huining Cui, Wei Liu  
+School of Computer Science, University of Technology Sydney, Australia
+
+**Abstract:**
+
+Retrieval-augmented generation (RAG) improves factual grounding by conditioning large language models on retrieved evidence, but it also opens a data-layer attack surface: poisoned corpus entries can steer outputs without changing model parameters. Existing defenses and traceback methods are largely passage-level, which is too coarse for modern attacks whose effective payload may be a short fabricated claim, trigger phrase, or hidden instruction embedded inside an otherwise benign chunk.
+
+We study black-box character-level poison traceback in RAG and present **RAGCharacter**, a two-pass forensic framework that localizes the responsible retrieved span for a concrete misgeneration event.
+
+**Pass-0** runs standard RAG while logging a prompt-anchored execution trace. **Pass-1** re-enters a triggered trace and performs event-conditioned traceback over prompt-used evidence via budgeted counterfactual masking and replay, yielding an attribution span for forensic reporting and a causal span under the logged trace.
+
+We further introduce an evaluation protocol that measures both event-level chunk traceback and character-level localization fidelity.
+
+Across two QA corpora, five poisoning attack families, six target LLMs, and multiple baselines, RAGCharacter achieves the best trade-off between localization accuracy and low over-attribution.
+
+These results suggest that prompt-conditioned, black-box character-level traceback is feasible in closed-source deployment settings, enabling fine-grained evidence auditing and remediation.
+
+---
+
+## 🚀 Key Features
+
+### 🔍 Two-pass traceback framework
+
+- **Pass-0:** standard RAG + trace logging
+- **Pass-1:** counterfactual masking + replay
+
+### ✂️ Character-level attribution
+
+- Span localization
+- Causal span identification
+
+### 📊 Evaluation metrics
+
+- **EVT**: event-level traceback
+- **TB@K / MRR**: retrieval attribution
+- **Char-F1 / IoU / FPR**: fine-grained localization
+
+### 🧪 Supports multiple attack settings
+
+- Corpus poisoning
+- Prompt injection
+- Multi-poison competition
+
+### 🔌 Flexible LLM backends
+
+- Ollama recommended for local
+- OpenAI API
+- llama.cpp optional
+
+---
+
+## 📁 Project Structure
+
+```text
 rag_char_trace/
   src/rag_char_trace/
-    data/            # JSONL 读取与数据结构
-    index/           # TF-IDF 索引与检索
-    llm/             # LLM 后端（Ollama / llama.cpp / OpenAI API）
+    data/            # JSONL loaders and data structures
+    index/           # TF-IDF indexing and retrieval
+    llm/             # LLM backends (Ollama / OpenAI / etc.)
     rag/             # RAG pipeline
-    trace/           # 统一 trace 日志
-    eval/            # ASR/EM 评测
-    utils/           # 文本归一化等
-  scripts/           # 可执行脚本（PowerShell 友好）
-  configs/           # YAML 配置
-  artifacts/         # 索引等中间产物（默认不提交）
-  runs/              # RAG 运行日志与评测输出（默认不提交）
-  data/              # 放置你的数据（不提交）
+    trace/           # Execution trace logging
+    eval/            # ASR / EM / traceback evaluation
+    utils/           # Text normalization and helpers
+
+  scripts/           # Executable scripts (PowerShell-friendly)
+  configs/           # YAML configs
+  artifacts/         # Index outputs (not committed)
+  runs/              # Logs and metrics (not committed)
+  data/              # Dataset directory (not committed)
 ```
 
-## 2. 环境搭建（Windows PowerShell）
+---
 
-建议 Python 3.10+。
+## ⚙️ Environment Setup
+
+### Windows PowerShell
+
+Python 3.10+ recommended.
 
 ```powershell
 cd rag_char_trace
+
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+
 python -m pip install -U pip
 pip install -r requirements.txt
 ```
 
-### 2.1 本地小模型优先（推荐起步：Ollama）
+---
 
-最省事的方式是用 Ollama 在本地跑 7B/8B，例如 `llama3:8b` 或 `llama2:7b`。
+## 🧪 Running the Full Pipeline
 
-- 安装并启动 Ollama 后，拉取模型：
-
-```powershell
-ollama pull llama3:8b
-```
-
-本仓库的 `ollama` 后端通过 HTTP 调用本地 Ollama 服务。
-
-### 2.2 OpenAI API（后续扩展）
-
-设置环境变量：
+### 🔁 Full RAG + Traceback Pipeline
 
 ```powershell
-$env:OPENAI_API_KEY="YOUR_KEY"
-```
+.\.venv\Scripts\Activate.ps1
 
-然后在脚本参数中选择 `--llm-backend openai`。
+$k    = 200
+$kuse = 10
+$limit = 500
 
-## 3. 快速复现实验：Build Index -> Run RAG -> Evaluate ASR
+$model  = "gemma:7b"
+$ollama = "http://127.0.0.1:11434"
 
-### 3.1 构建 TF-IDF 索引
+foreach ($dataset in @("nq","msmarco")) {
 
-```powershell
-python scripts/01_build_index.py --dataset nq --chunks data/nq/chunks.jsonl --out artifacts/nq_tfidf
-```
+  $base = Join-Path "data_splits" $dataset
 
-### 3.2 运行 RAG（Ollama / Llama 7B/8B）
+  Get-ChildItem -Path $base -Directory | ForEach-Object {
 
-```powershell
-python scripts/02_run_rag.py `
-  --dataset nq `
-  --answers data/nq/answers.jsonl `
-  --index artifacts/nq_tfidf `
-  --k 10 `
-  --llm-backend ollama `
-  --ollama-model llama3:8b `
-  --out runs/nq_llama3_8b_k10.jsonl
-```
+    $splitDir  = $_.FullName
+    $splitName = $_.Name
 
-该脚本会输出每个问题的：
-- query
-- top-k 检索到的 chunks（含 `chunk_id`, `meta.poisoned`, `text`）
-- 组合后的 prompt
-- 模型输出与运行耗时
+    $answers = Join-Path $splitDir "answers.jsonl"
+    $chunks  = Join-Path $splitDir "chunks.jsonl"
 
-### 3.3 评测 ASR（攻击成功率）
+    $indexOut = Join-Path "artifacts" ("{0}_{1}_tfidf" -f $dataset, $splitName)
 
-```powershell
-python scripts/03_eval_asr.py --run runs/nq_llama3_8b_k10.jsonl --answers data/nq/answers.jsonl --out runs/nq_llama3_8b_k10_metrics.json
-```
+    $run0 = Join-Path "runs" ("{0}_{1}_pass0_limit{2}.jsonl" -f $dataset, $splitName, $limit)
+    $met0 = Join-Path "runs" ("{0}_{1}_pass0_limit{2}_metrics.json" -f $dataset, $splitName, $limit)
 
-默认 ASR 判定：预测答案（归一化后）是否匹配 `incorrect_answer`。
+    $run1 = Join-Path "runs" ("{0}_{1}_pass1_limit{2}.jsonl" -f $dataset, $splitName, $limit)
+    $met1 = Join-Path "runs" ("{0}_{1}_pass1_limit{2}_pass1_metrics.json" -f $dataset, $splitName, $limit)
+    $csv1 = Join-Path "runs" ("{0}_{1}_pass1_limit{2}_metrics_per_example.csv" -f $dataset, $splitName, $limit)
 
-## 4. Trace 设计（为后续字符级查毒做准备）
+    Write-Host "`n==== Dataset=$dataset Split=$splitName ===="
 
-本仓库的 `trace` 记录以 JSONL 输出，每条样本包含：
-- `retrieval`: top-k chunks + 分数
-- `generation`: prompt + raw completion
-- `meta`: dataset/attack/qid 等
+    python scripts/01_build_index.py --dataset $dataset --chunks $chunks --out $indexOut
 
-后续做字符级查毒时，可以在 `trace` 中加入：
-- `suspicious_spans`: 对检索 chunk 的可疑字符片段（start/end）
-- `attribution`: “答案片段 -> 证据 chunk -> span” 的映射
+    python scripts/02_run_rag.py `
+      --dataset $dataset `
+      --answers $answers `
+      --index $indexOut `
+      --k $k `
+      --k-use $kuse `
+      --limit $limit `
+      --llm-backend ollama `
+      --ollama-model $model `
+      --ollama-url $ollama `
+      --temperature 0 `
+      --max-tokens 256 `
+      --out $run0
 
-## 5. 与你给出的数据字段如何对齐
+    python scripts/03_eval_asr.py --run $run0 --out $met0
 
-- `chunks.jsonl` 中的 `guilty_spans` 目前仅用于**上帝视角**评估（可选）；默认 pipeline 不依赖它。
-- `meta.poisoned=true` 用于统计与可视化（例如检索到的 top-k 中毒比例）。
+    python scripts/06_pass1_traceback.py `
+      --run $run0 `
+      --out $run1 `
+      --trigger PAR `
+      --objective event `
+      --candidate-mode event `
+      --max-rounds 3 `
+      --max-chunks-to-test 5 `
+      --max-sentences-to-test 5 `
+      --top-sentences 2 `
+      --max-span-candidates 12 `
+      --max-bisect-steps 6 `
+      --min-span-len 4 `
+      --llm-backend ollama `
+      --ollama-model $model `
+      --ollama-url $ollama `
+      --temperature 0 `
+      --max-tokens 64
 
-## 6. 下一步建议（面向发表）
-
-1) 在不同 `k`、不同 retriever（TF-IDF/BM25/向量检索）下复现 ASR 表格。
-2) 固化 trace 与随机种子，保证实验可复现。
-3) 基于 trace 扩展字符级归因（span-level），并将“查毒/解毒策略”与 ASR 降低幅度关联。
-
-
-## 7. 复现类似 Table-2 的按 dataset/attack 分组 ASR 表
-
-如果你的 `answers.jsonl` 里已经包含 `dataset` 与 `attack` 字段（你给的示例就是如此），那么单次 `run.jsonl` 里会保留这些 meta 字段。
-你可以直接对一次运行结果做 **(dataset, attack)** 分组统计，并导出 CSV/LaTeX：
-
-```powershell
-python scripts/05_group_asr_table.py `
-  --run runs/nq_llama3_8b_k10.jsonl `
-  --out-json runs/nq_grouped_asr.json `
-  --out-csv runs/nq_grouped_asr.csv `
-  --out-tex runs/nq_grouped_asr.tex
-```
-
-## 7. 导出“Dataset x Attack”的 ASR 表（更接近论文 Table 2）
-
-如果你的 `answers.jsonl`/`meta` 字段中包含 `dataset` 与 `attack`，且你一次性跑了一个包含多种 attack 的 run（或把多个 run 合并到一个 JSONL），可以用下面脚本直接导出宽表：
-
-```powershell
-python scripts/05_group_asr_table.py --run runs/nq_llama3_8b_k10.jsonl --out-csv runs/table2.csv --out-tex runs/table2.tex
-```
-
-说明：该脚本默认从 `run.jsonl` 里的 `meta.dataset` 与 `meta.attack` 做分组；若缺失则会显示为 `(unknown)`。
-
-### 3.2.1 大 K (200/500) 的现实限制与推荐参数
-
-当你将 `k` 设为 200/500 时，直接把 top-k 全量拼进 prompt 往往会超出小模型 (7B/8B) 的上下文窗口。
-本仓库在 `scripts/02_run_rag.py` 提供了三个参数用于控制 prompt 大小：
-
-- `--prompt-chunk-chars`：每个 chunk 放进 prompt 的最大字符数（默认 1000）
-- `--max-context-chars`：所有上下文合计最大字符数（默认 12000）
-- `--trace-chunk-chars`：写入 run JSONL 时保存的 chunk 文本预览长度（默认 512；完整文本可由 chunk_id 回查）
-
-例如：
-
-```powershell
-python scripts/02_run_rag.py `
-  --dataset nq `
-  --answers data/nq/answers.jsonl `
-  --index artifacts/nq_tfidf `
-  --k 500 `
-  --prompt-chunk-chars 400 `
-  --max-context-chars 12000 `
-  --llm-backend ollama `
-  --ollama-model llama3:8b `
-  --out runs/nq_llama3_8b_k500.jsonl
+    python scripts/07_eval_pass1.py `
+      --pass1 $run1 `
+      --chunks $chunks `
+      --tb-k 5 `
+      --cand-k 5 `
+      --out $met1 `
+      --out-csv $csv1
+  }
+}
 ```
