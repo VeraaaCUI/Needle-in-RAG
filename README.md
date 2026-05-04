@@ -24,18 +24,7 @@ School of Computer Science, University of Technology Sydney, Australia
 
 **Abstract:**
 
-Retrieval-augmented generation (RAG) improves factual grounding by conditioning large language models on retrieved evidence, but it also opens a data-layer attack surface: poisoned corpus entries can steer outputs without changing model parameters. Existing defenses and traceback methods are largely passage-level, which is too coarse for modern attacks whose effective payload may be a short fabricated claim, trigger phrase, or hidden instruction embedded inside an otherwise benign chunk.
-
-We study black-box character-level poison traceback in RAG and present **RAGCharacter**, a two-pass forensic framework that localizes the responsible retrieved span for a concrete misgeneration event.
-
-**Pass-0** runs standard RAG while logging a prompt-anchored execution trace. **Pass-1** re-enters a triggered trace and performs event-conditioned traceback over prompt-used evidence via budgeted counterfactual masking and replay, yielding an attribution span for forensic reporting and a causal span under the logged trace.
-
-We further introduce an evaluation protocol that measures both event-level chunk traceback and character-level localization fidelity.
-
-Across two QA corpora, five poisoning attack families, six target LLMs, and multiple baselines, RAGCharacter achieves the best trade-off between localization accuracy and low over-attribution.
-
-These results suggest that prompt-conditioned, black-box character-level traceback is feasible in closed-source deployment settings, enabling fine-grained evidence auditing and remediation.
-
+Retrieval-augmented generation (RAG) improves factual grounding by conditioning generation on retrieved evidence, but it also exposes a data-layer attack surface: poisoned corpus entries can induce harmful outputs without modifying model parameters. Existing defenses and traceback methods remain largely passage-level, which is too coarse when the effective payload is a short fabricated claim, trigger phrase, or hidden instruction embedded in an otherwise benign chunk. We study black-box character-level poison traceback for RAG and introduce **RAGCharacter**, a two-pass forensic framework for localizing the retrieved span responsible for a concrete misgeneration event. Pass-0 executes standard RAG while logging prompt-anchored traces; Pass-1 re-enters a triggered trace and performs event-conditioned attribution over prompt-used evidence using budgeted counterfactual masking and replay. We further propose an evaluation protocol that measures both event-level traceback and character-level localization fidelity. Across two QA corpora, five poisoning attack families, six target LLMs, and multiple baselines, **RAGCharacter** achieves the strongest localization--over-attribution trade-off in our benchmark. These results show that prompt-conditioned character-level traceback is feasible in black-box RAG deployments, moving RAG forensics from document-level suspicion toward fine-grained evidence auditing.
 ---
 
 ## 🚀 Key Features
